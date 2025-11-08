@@ -12,23 +12,23 @@ services:
     ports:
       - "5432:5432"
 
-  backend:
-    build: ./backend
-    env_file:
-      - ./backend/.env
-    volumes:
-      - ./backend/app/uploads:/app/app/uploads
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
+  # backend:
+  #   build: ./backend
+  #   env_file:
+  #     - ./backend/.env
+  #   volumes:
+  #     - ./backend/app/uploads:/app/app/uploads
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - db
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "5173:80"
-    depends_on:
-      - backend
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "5173:80"
+  #   depends_on:
+  #     - backend
 
 volumes:
   pgdata:
