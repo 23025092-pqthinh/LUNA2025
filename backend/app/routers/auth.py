@@ -5,6 +5,7 @@ from ..database import get_db
 from ..models import User
 from ..schemas import TokenOut, UserCreate, UserOut
 from ..utils import verify_password, hash_password, create_access_token
+from ..deps import SECRET_KEY, ALGORITHM
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -13,7 +14,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_access_token({"sub": user.username, "role": user.role})
+    token = create_access_token(
+        data={"sub": user.username, "role": user.role},
+        secret_key=SECRET_KEY,
+        algorithm=ALGORITHM
+    )
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/register", response_model=UserOut)

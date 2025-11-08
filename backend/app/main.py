@@ -18,22 +18,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def seed_admin():
-    import os
-    from dotenv import load_dotenv
-    load_dotenv()
-    username = os.getenv("ADMIN_USERNAME", "admin")
-    password = os.getenv("ADMIN_PASSWORD", "admin123")
-    group = os.getenv("ADMIN_GROUP", "group1")
+def init_db():
+    """Initialize database with tables and seed data."""
+    from .seeders import seed_all
+    
+    # Create database tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Seed initial data
     db = SessionLocal()
     try:
-        if not db.query(User).filter(User.username == username).first():
-            user = User(username=username, password_hash=hash_password(password), role="admin", group_name=group)
-            db.add(user); db.commit()
+        seed_all(db)
     finally:
         db.close()
 
-seed_admin()
+# Initialize database on startup
+init_db()
 
 app.include_router(auth.router)
 app.include_router(users.router)
