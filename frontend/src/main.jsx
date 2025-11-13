@@ -1,6 +1,6 @@
-import React from 'react'
+import React, {useEffect} from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom'
 import './index.css'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
@@ -41,10 +41,16 @@ function usePageTitle() {
 function AppShell() {
   const { token, user, logout } = useAuth()
   if (!token) return <Navigate to="/login" />
-  const pageTitle = usePageTitle()
+  
+  const [pageTitle, setPageTitle] = React.useState(usePageTitle());
 
-  // local UI state for the topbar
   const [q, setQ] = React.useState('')
+
+  const location = useLocation();
+
+  useEffect(() => {
+    setPageTitle(usePageTitle());
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -52,9 +58,8 @@ function AppShell() {
       <aside className="sidebar-fixed">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8 pb-4 border-b border-slate-200">
-            <span className="text-3xl">🌙</span>
             <span className="text-2xl font-bold bg-gradient-to-r from-brand-500 to-brand-600 bg-clip-text text-transparent font-display">
-              LUNA25
+              LUNA25UET
             </span>
           </div>
           <nav className="flex flex-col space-y-2">
@@ -115,7 +120,7 @@ function AppShell() {
         <header className="topbar">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-500 to-brand-600 bg-clip-text text-transparent font-display">
-              {pageTitle || 'LUNA25'}
+              {pageTitle || 'LUNA25UET'}
             </h1>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">🔍</span>
@@ -123,7 +128,7 @@ function AppShell() {
                 value={q} 
                 onChange={e=>setQ(e.target.value)} 
                 placeholder="Search datasets, submissions..." 
-                className="input w-80 pl-10 bg-slate-50/50 border-slate-200" 
+                className="input w-80 !pl-10 bg-slate-50/50 border-slate-200"
               />
             </div>
           </div>

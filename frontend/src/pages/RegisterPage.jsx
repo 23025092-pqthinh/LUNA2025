@@ -44,9 +44,8 @@ export default function RegisterPage(){
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
             <form onSubmit={onSubmit} className="card w-full max-w-md space-y-5 shadow-soft-lg">
                 <div className="text-center mb-2">
-                    <div className="text-4xl mb-3">🌙</div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-brand-500 to-brand-600 bg-clip-text text-transparent font-display">
-                        LUNA25
+                        LUNA25UET
                     </h1>
                     <p className="text-navy-600 mt-2">Create an account to get started</p>
                 </div>

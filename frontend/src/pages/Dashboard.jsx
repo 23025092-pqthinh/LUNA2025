@@ -267,10 +267,10 @@ export default function Dashboard(){
       <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-2 border-indigo-200">
         <h2 className="text-xl font-semibold mb-3 flex items-center gap-2 text-indigo-900">
           <span className="text-2xl">ℹ️</span>
-          About LUNA25
+          About LUNA25UET
         </h2>
         <p className="text-navy-700 leading-relaxed text-base">
-          LUNA25 is a lung cancer prediction system that evaluates malignant lung tumor risk from chest CT images. 
+          LUNA25UET is a lung cancer prediction system that evaluates malignant lung tumor risk from chest CT images. 
           The system ranks team models based on their performance on test datasets, with scoring from 6.5 to 10 (A+) 
           based on ranking positions. Teams submit their model APIs for evaluation on the official test dataset.
         </p>
