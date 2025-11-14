@@ -8,7 +8,7 @@ import {
 } from 'recharts'
 
 export default function Dashboard(){
-  const { API, authHeader } = useAuth()
+  const { API, authHeader, token } = useAuth()
   const [datasets, setDatasets] = useState({items:[]})
   const [subs, setSubs] = useState({items:[]})
   const [loading, setLoading] = useState(true)
@@ -16,10 +16,15 @@ export default function Dashboard(){
   useEffect(()=>{
     setLoading(true)
     Promise.all([
-      axios.get(`${API}/datasets/`).then(r=>setDatasets(r.data)),
+      axios.get(`${API}/datasets/`, { headers: authHeader }).then(r=>setDatasets(r.data)),
       axios.get(`${API}/submissions/`, { headers: authHeader }).then(r=>setSubs(r.data))
-    ]).finally(() => setLoading(false))
-  }, [])
+    ])
+      .catch(() => {
+        setDatasets({ items: [] })
+        setSubs({ items: [] })
+      })
+      .finally(() => setLoading(false))
+  }, [API, token])
 
   const official = datasets.items?.find(d=>d.is_official)
   
