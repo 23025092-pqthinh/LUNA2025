@@ -27,7 +27,7 @@ def leaderboard(dataset_id: int | None = None, metric: str = "AUC", db: Session 
     a non-null value for the chosen metric in score_json are returned.
     Allowed metrics: AUC, F1, ACC, PRECISION (case-insensitive).
     """
-    allowed = {"auc": "AUC", "f1": "F1", "acc": "ACC", "precision": "PRECISION"}
+    allowed = {"auc": "AUC", "f1": "F1", "acc": "ACC", "precision": "PRECISION", "recall": "RECALL"}
     metric_key = allowed.get(metric.lower(), "AUC")
 
     # use outerjoin so submissions without a linked user are still returned
@@ -52,6 +52,7 @@ def leaderboard(dataset_id: int | None = None, metric: str = "AUC", db: Session 
         auc_v = _get_metric_from_score(sub.score_json, "AUC")
         f1_v = _get_metric_from_score(sub.score_json, "F1")
         prec_v = _get_metric_from_score(sub.score_json, "PRECISION")
+        rec_v = _get_metric_from_score(sub.score_json, "RECALL")
         acc_v = _get_metric_from_score(sub.score_json, "ACC")
 
         out.append({
@@ -66,6 +67,7 @@ def leaderboard(dataset_id: int | None = None, metric: str = "AUC", db: Session 
             "auc": auc_v,
             "f1": f1_v,
             "precision": prec_v,
+            "recall": rec_v,
             "acc": acc_v,
         })
 

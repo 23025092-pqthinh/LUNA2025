@@ -1,5 +1,13 @@
 import pandas as pd
-from sklearn.metrics import roc_auc_score, f1_score, accuracy_score, recall_score, roc_curve, precision_recall_curve
+from sklearn.metrics import (
+    roc_auc_score,
+    f1_score,
+    accuracy_score,
+    recall_score,
+    precision_score,
+    roc_curve,
+    precision_recall_curve,
+)
 import csv
 import os
 from typing import Dict, Any
@@ -47,22 +55,36 @@ def evaluate_predictions(ground_truth_path, predict_path):
     except Exception:
         auc = None
     y_hat = (y_score >= 0.5).astype(int)
-    f1 = float(f1_score(y_true, y_hat))
+    f1 = float(f1_score(y_true, y_hat, zero_division=0))
     acc = float(accuracy_score(y_true, y_hat))
-    rec = float(recall_score(y_true, y_hat))
+    rec = float(recall_score(y_true, y_hat, zero_division=0))
+    prec_value = float(precision_score(y_true, y_hat, zero_division=0))
 
     fpr, tpr, _ = roc_curve(y_true, y_score)
-    prec, rec_curve, _ = precision_recall_curve(y_true, y_score)
-
-    return {
+    prec_curve, rec_curve, _ = precision_recall_curve(y_true, y_score)
+    metrics = {
         "AUC": auc,
         "F1": f1,
         "Accuracy": acc,
         "Recall": rec,
+        "PRECISION": prec_value,
+        "RECALL": rec,
+        "ACC": acc,
+        # legacy casing expected elsewhere in the codebase
+        "accuracy": acc,
+        "precision": prec_value,
+        "recall": rec,
+        "f1": f1,
+    }
+
+    return {
+        **metrics,
         "ROC": {"fpr": fpr.tolist(), "tpr": tpr.tolist()},
         "PR": {"precision": prec.tolist(), "recall": rec_curve.tolist()},
+        "PR": {"precision": prec_curve.tolist(), "recall": rec_curve.tolist()},
         "n_samples": int(len(merged))
     }
+
 
 def _read_label_map(path: str) -> Dict[str, str]:
     m = {}
@@ -94,18 +116,37 @@ def compute_classification_metrics(gt_path: str, pred_path: str) -> Dict[str, fl
     if not gt:
         return {"accuracy": 0.0, "precision": 0.0, "recall": 0.0, "f1": 0.0}
 
-    total = 0
-    correct = 0
+    y_true = []
+    y_pred = []
     for k, v in gt.items():
-        total += 1
-        if k in pred and pred[k] == v:
-            correct += 1
+        if k not in pred:
+            continue
+        y_true.append(v)
+        y_pred.append(pred[k])
 
-    accuracy = correct / total if total else 0.0
-    # For single-label micro averaged metrics these reduce to accuracy.
-    precision = accuracy
-    recall = accuracy
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    if not y_true:
+        return {"accuracy": 0.0, "precision": 0.0, "recall": 0.0, "f1": 0.0}
+
+    # try to coerce to numeric labels if possible for binary problems
+    def _coerce(val):
+        try:
+            return int(val)
+        except Exception:
+            return val
+
+    y_true_num = [_coerce(v) for v in y_true]
+    y_pred_num = [_coerce(v) for v in y_pred]
+
+    unique_labels = sorted(set(y_true_num))
+    average = "binary" if len(unique_labels) == 2 else "macro"
+    score_kwargs = {"zero_division": 0}
+    if average == "binary":
+        score_kwargs["pos_label"] = unique_labels[-1]
+
+    accuracy = float(accuracy_score(y_true_num, y_pred_num))
+    precision = float(precision_score(y_true_num, y_pred_num, average=average, **score_kwargs))
+    recall = float(recall_score(y_true_num, y_pred_num, average=average, **score_kwargs))
+    f1 = float(f1_score(y_true_num, y_pred_num, average=average, **score_kwargs))
 
     return {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1}
 

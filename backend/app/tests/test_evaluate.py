@@ -15,3 +15,6 @@ def test_analyze_and_evaluate(tmp_path):
     res = evaluate_predictions(str(gt), str(pred))
     assert "AUC" in res and res["AUC"] is not None
     assert 0 <= res["F1"] <= 1
+    assert 0 <= res["PRECISION"] <= 1
+    assert 0 <= res["RECALL"] <= 1
+    assert 0 <= res["ACC"] <= 1
