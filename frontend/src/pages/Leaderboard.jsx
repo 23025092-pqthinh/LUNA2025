@@ -8,6 +8,8 @@ export default function Leaderboard(){
   const [items, setItems] = useState([])
   const [datasets, setDatasets] = useState([]) // API may return array or {items:[]}
   const [datasetId, setDatasetId] = useState('')
+  const [history, setHistory] = useState([])
+  const [selectedGroup, setSelectedGroup] = useState('')
   const [metric, setMetric] = useState('AUC')
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : null
@@ -35,6 +37,21 @@ export default function Leaderboard(){
   }
   useEffect(()=>{ load() }, [datasetId, metric])
 
+  const loadHistory = async (group, dsid)=>{
+    setSelectedGroup(group)
+    try {
+      const opts = authHeaders ? { headers: authHeaders } : undefined
+      const r = await axios.get(
+        `${API}/leaderboard/history?group_name=${encodeURIComponent(group)}&dataset_id=${dsid}`,
+        opts
+      )
+      setHistory(r.data.map((x,i)=>({i, auc:x.auc})))
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('History load error', err?.response?.status, err?.message)
+      setHistory([])
+    }
+  }
 
   const getDatasetName = (id)=>{
     if (id === null || id === undefined) return '-'
@@ -60,6 +77,7 @@ export default function Leaderboard(){
           <p className="text-navy-600 mt-2">Track team performance and rankings</p>
         </div>
       </div>
+
       <div className="card">
         <div className="flex gap-4 items-center flex-wrap">
           <div>
@@ -75,7 +93,6 @@ export default function Leaderboard(){
               <option value="AUC">AUC</option>
               <option value="F1">F1 Score</option>
               <option value="PRECISION">Precision</option>
-              <option value="RECALL">Recall</option>
               <option value="ACC">Accuracy</option>
             </select>
           </div>
@@ -98,9 +115,6 @@ export default function Leaderboard(){
               </th>
               <th className={`cursor-pointer ${metric==='PRECISION' ? 'text-brand-600' : ''}`} onClick={()=>setMetric('PRECISION')}>
                 Precision {metric==='PRECISION' && '↓'}
-              </th>
-              <th className={`cursor-pointer ${metric==='Recall' ? 'text-brand-600' : ''}`} onClick={()=>setMetric('Recall')}>
-                Accuracy {metric==='ACC' && '↓'}
               </th>
               <th className={`cursor-pointer ${metric==='ACC' ? 'text-brand-600' : ''}`} onClick={()=>setMetric('ACC')}>
                 Accuracy {metric==='ACC' && '↓'}
@@ -127,9 +141,6 @@ export default function Leaderboard(){
                 </td>
                 <td className={metric==='PRECISION' ? 'font-bold text-brand-600' : ''}>
                   {(x.precision!=null) ? x.precision.toFixed?.(4) ?? x.precision : '-'}
-                </td>
-                <td className={metric==='Recall' ? 'font-bold text-brand-600' : ''}>
-                  {(x.precision!=null) ? x.recall.toFixed?.(4) ?? x.recall : '-'}
                 </td>
                 <td className={metric==='ACC' ? 'font-bold text-brand-600' : ''}>
                   {(x.acc!=null) ? x.acc.toFixed?.(4) ?? x.acc : '-'}

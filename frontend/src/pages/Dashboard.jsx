@@ -105,7 +105,7 @@ export default function Dashboard(){
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm opacity-90 mb-1 font-medium">Total Datasets</div>
-              <div className="text-4xl font-bold">{datasets.total || 0}</div>
+              <div className="text-4xl font-bold">{datasets.items?.length || 0}</div>
             </div>
             <div className="text-5xl opacity-30">📚</div>
           </div>

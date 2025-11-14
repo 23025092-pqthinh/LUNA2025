@@ -63,18 +63,11 @@ def evaluate_predictions(ground_truth_path, predict_path):
     fpr, tpr, _ = roc_curve(y_true, y_score)
     prec_curve, rec_curve, _ = precision_recall_curve(y_true, y_score)
     metrics = {
-        "AUC": auc,
-        "F1": f1,
-        "Accuracy": acc,
-        "Recall": rec,
-        "PRECISION": prec_value,
-        "RECALL": rec,
-        "ACC": acc,
-        # legacy casing expected elsewhere in the codebase
-        "accuracy": acc,
+        "auc" : auc,
         "precision": prec_value,
         "recall": rec,
         "f1": f1,
+        "acc" : acc,
     }
 
     return {
