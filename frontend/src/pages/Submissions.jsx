@@ -216,8 +216,12 @@ export default function Submissions() {
         </div>
 
         <div>
-          <button className="btn" type="submit" disabled={!file}>
-            Upload submission
+          <button className="btn-icon" type="submit" disabled={!file} title="Upload submission">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 5 17 10" />
+              <line x1="12" y1="5" x2="12" y2="19" />
+            </svg>
           </button>
           {msg && <span className="text-sm ml-3">{msg}</span>}
         </div>
@@ -285,16 +289,27 @@ export default function Submissions() {
                 {/* actions */}
                 <div className="flex flex-col items-end gap-2">
                   <a
-                    className="btn"
-                    href={`${API}/submissions/${s.id}/download`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Download
+                      className="btn-icon"
+                      href={`${API}/submissions/${s.id}/download`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Download"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
                   </a>
                   {(user?.role === "admin" || user?.id === s.uploader_id) && (
-                    <button className="btn btn-danger" onClick={() => deleteSubmission(s.id, s.uploader_id)}>
-                      Delete
+                    <button className="btn-icon btn-icon-danger" title="Delete submission" onClick={() => deleteSubmission(s.id, s.uploader_id)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <path d="M3 6h18" />
+                        <path d="M8 6v12a2 2 0 002 2h4a2 2 0 002-2V6" />
+                        <path d="M10 11v6" />
+                        <path d="M14 11v6" />
+                        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                      </svg>
                     </button>
                   )}
                 </div>

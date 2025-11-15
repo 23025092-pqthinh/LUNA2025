@@ -154,9 +154,22 @@ export default function Users() {
                     <td className="p-2"><span className="badge">{u.role}</span></td>
                     <td className="p-2 muted">{u.group_name || '-'}</td>
                     <td className="p-2">
-                      <button className="btn btn-sm mr-2" onClick={()=>openEdit(u)}>View / Edit</button>
+                      <button className="btn-icon mr-2" title="View / Edit" onClick={()=>openEdit(u)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                          <path d="M3 21v-3.75L14.06 6.19a2.25 2.25 0 013.18 0l1.56 1.56a2.25 2.25 0 010 3.18L7.75 21H3z" />
+                          <path d="M14 7l3 3" />
+                        </svg>
+                      </button>
                       {isAdmin ? (
-                        <button className="btn btn-danger btn-sm" onClick={()=>deleteUser(u.id)}>Delete</button>
+                        <button className="btn-icon btn-icon-danger" title="Delete user" onClick={()=>deleteUser(u.id)}>
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                            <path d="M3 6h18" />
+                            <path d="M8 6v12a2 2 0 002 2h4a2 2 0 002-2V6" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                          </svg>
+                        </button>
                       ) : null}
                     </td>
                   </tr>
@@ -171,10 +184,23 @@ export default function Users() {
         <div className="card p-4">
           <div className="flex items-center justify-between">
             <div className="font-semibold">User Info</div>
-            <div>
-              <button className="btn btn-sm mr-2" onClick={()=>{setSelected(null); setEdit({})}}>Close</button>
+            <div className="flex items-center gap-2">
+              <button className="btn-icon btn-icon-ghost" title="Close" onClick={()=>{setSelected(null); setEdit({})}}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M18 6L6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
               {isAdmin ? (
-                <button className="btn btn-danger btn-sm" onClick={()=>deleteUser(selected.id)}>Delete</button>
+                <button className="btn-icon btn-icon-danger" title="Delete user" onClick={()=>deleteUser(selected.id)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                    <path d="M3 6h18" />
+                    <path d="M8 6v12a2 2 0 002 2h4a2 2 0 002-2V6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                  </svg>
+                </button>
               ) : null}
             </div>
           </div>

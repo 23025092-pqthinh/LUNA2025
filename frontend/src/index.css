@@ -123,3 +123,24 @@ input[type="file"] {
 .main-content {
   @apply ml-64 min-h-screen;
 }
+
+select {
+  @apply border-2 border-slate-200 rounded-xl px-4 py-2.5 w-full block appearance-none bg-white bg-no-repeat bg-[right_0.75rem_center];
+  /* custom arrow to make select visually match inputs */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23959' %3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  @apply focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all duration-200;
+}
+
+/* Icon-only button (small circular) */
+.btn-icon {
+  @apply inline-flex items-center justify-center w-9 h-9 rounded-lg p-2 text-white transition-all duration-150;
+  @apply bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700;
+  @apply shadow-sm hover:shadow-md;
+}
+.btn-icon svg { @apply w-4 h-4; }
+.btn-icon.btn-icon-danger {
+  @apply bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700;
+}
+.btn-icon.btn-icon-ghost {
+  @apply bg-transparent text-navy-700 hover:bg-slate-100 border border-transparent;
+}
