@@ -212,45 +212,54 @@ export default function Leaderboard(){
         </table>
       </div>
 
-      {history.length>0 && (
+      {selectedGroup && (
         <div className="card">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-navy-700">
             <span className="text-2xl">📈</span>
             AUC Performance Over Time — <span className="text-brand-600">{selectedGroup}</span>
           </h2>
-          <div style={{width:'100%', height:300}}>
-            <ResponsiveContainer>
-              <LineChart data={history}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis 
-                  dataKey="i" 
-                  label={{ value: 'Submission #', position: 'insideBottom', offset: -5 }}
-                  tick={{ fill: '#64748B', fontSize: 12 }}
-                />
-                <YAxis 
-                  domain={['auto','auto']} 
-                  tick={{ fill: '#64748B', fontSize: 12 }}
-                  label={{ value: 'AUC Score', angle: -90, position: 'insideLeft' }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#FFF', 
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="auc" 
-                  stroke="#4318FF" 
-                  strokeWidth={3}
-                  dot={{ fill: '#4318FF', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {history.length > 1 ? (
+            <div style={{width:'100%', height:300}}>
+              <ResponsiveContainer>
+                <LineChart data={history}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                  <XAxis 
+                    dataKey="i" 
+                    label={{ value: 'Submission #', position: 'insideBottom', offset: -5 }}
+                    tick={{ fill: '#64748B', fontSize: 12 }}
+                  />
+                  <YAxis 
+                    domain={['auto','auto']} 
+                    tick={{ fill: '#64748B', fontSize: 12 }}
+                    label={{ value: 'AUC Score', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#FFF', 
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="auc" 
+                    stroke="#4318FF" 
+                    strokeWidth={3}
+                    dot={{ fill: '#4318FF', r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : history.length === 1 ? (
+            <div className="p-6 text-center text-slate-600">
+              Only one submission available — not enough history to plot.
+              <div className="mt-2">Latest AUC: {history[0].auc != null ? Number(history[0].auc).toFixed(4) : '-'}</div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-slate-500">No history available for this user.</div>
+          )}
         </div>
       )}
     </div>

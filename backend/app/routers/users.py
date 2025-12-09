@@ -61,6 +61,19 @@ def update_user(user_id: int, payload: dict = Body(...), db: Session = Depends(g
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     is_admin = getattr(current_user, "role", None) == "admin"
+    # students are not allowed to edit profiles (even their own)
+    # Also guard against legacy accounts that may be named like student<N> but have role 'user'
+    username = getattr(current_user, "username", "") or ""
+    is_student_username = False
+    try:
+        if username.startswith("student") and username[7:].isdigit():
+            is_student_username = True
+    except Exception:
+        is_student_username = False
+
+    if not is_admin and (getattr(current_user, "role", None) == "student" or is_student_username):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students are not allowed to edit profiles")
+
     if not is_admin and getattr(current_user, "id", None) != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
