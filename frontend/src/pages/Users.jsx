@@ -10,6 +10,7 @@ export default function Users() {
   const [edit, setEdit] = React.useState({})
 
   const isAdmin = me?.role === 'admin'
+  const isStudentSelf = me?.role === 'student' && selected?.id === me?.id
 
   // helper to build headers supporting authHeader() or authHeader object or token
   function buildHeaders(extra = {}) {
@@ -185,10 +186,9 @@ export default function Users() {
           <div className="flex items-center justify-between">
             <div className="font-semibold">User Info</div>
             <div className="flex items-center gap-2">
-              <button className="btn-icon btn-icon-ghost" title="Close" onClick={()=>{setSelected(null); setEdit({})}}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                  <path d="M18 6L6 18" />
-                  <path d="M6 6l12 12" />
+              <button className="btn-icon btn-icon-ghost" title="Close" onClick={()=>{setSelected(null); setEdit({})}} aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
+                  <path d="M6 6 L18 18 M6 18 L18 6" />
                 </svg>
               </button>
               {isAdmin ? (
@@ -208,26 +208,28 @@ export default function Users() {
           <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
             <div>
               <label className="text-xs muted">Username</label>
-              <input className="input" value={edit.username} onChange={e=>setEdit(s=>({...s, username: e.target.value}))} />
+              <input className="input" value={edit.username} onChange={e=>setEdit(s=>({...s, username: e.target.value}))} disabled={isStudentSelf} />
             </div>
             <div>
               <label className="text-xs muted">Full name</label>
-              <input className="input" value={edit.full_name} onChange={e=>setEdit(s=>({...s, full_name: e.target.value}))} />
+              <input className="input" value={edit.full_name} onChange={e=>setEdit(s=>({...s, full_name: e.target.value}))} disabled={isStudentSelf} />
             </div>
             <div>
               <label className="text-xs muted">Email</label>
-              <input className="input" value={edit.email} onChange={e=>setEdit(s=>({...s, email: e.target.value}))} />
+              <input className="input" value={edit.email} onChange={e=>setEdit(s=>({...s, email: e.target.value}))} disabled={isStudentSelf} />
             </div>
             <div>
               <label className="text-xs muted">Group</label>
-              <input className="input" value={edit.group_name} onChange={e=>setEdit(s=>({...s, group_name: e.target.value}))} />
+              <input className="input" value={edit.group_name} onChange={e=>setEdit(s=>({...s, group_name: e.target.value}))} disabled={isStudentSelf} />
             </div>
 
             {isAdmin ? (
               <div>
                 <label className="text-xs muted">Role</label>
                 <select className="input" value={edit.role} onChange={e=>setEdit(s=>({...s, role: e.target.value}))}>
+                  <option value="student">student</option>
                   <option value="user">user</option>
+                  <option value="teacher">teacher</option>
                   <option value="admin">admin</option>
                 </select>
               </div>
@@ -235,18 +237,14 @@ export default function Users() {
 
             <div>
               <label className="text-xs muted">Password (leave empty to keep)</label>
-              <input className="input" type="password" value={edit.password || ''} onChange={e=>setEdit(s=>({...s, password: e.target.value}))} />
+              <input className="input" type="password" value={edit.password || ''} onChange={e=>setEdit(s=>({...s, password: e.target.value}))} disabled={isStudentSelf} />
             </div>
 
             <div className="col-span-2 flex items-center gap-3 mt-2">
-              <button className="btn" onClick={()=>updateUser(selected.id, edit)}>Save</button>
-              <button className="btn btn-ghost" onClick={()=>{ setEdit({
-                username: selected.username || '',
-                full_name: selected.full_name || '',
-                email: selected.email || '',
-                group_name: selected.group_name || '',
-                role: selected.role || ''
-              })}}>Reset</button>
+              <button className="btn" onClick={()=>updateUser(selected.id, edit)} disabled={isStudentSelf}>Save</button>
+              {isStudentSelf && (
+                <div className="text-sm text-yellow-700 ml-3">Students are not allowed to edit their profile.</div>
+              )}
             </div>
           </div>
         </div>

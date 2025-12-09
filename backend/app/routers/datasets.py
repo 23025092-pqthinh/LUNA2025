@@ -483,14 +483,69 @@ def delete_dataset(
             logger.debug("remove_path unexpected failure", exc_info=True)
 
     try:
+        # Gather submission artifacts and related metric ids for cleanup
+        subs = db.query(models.Submission).filter(models.Submission.dataset_id == id).all()
+        submission_paths = [getattr(s, "file_path", None) for s in subs]
+        submission_ids = [getattr(s, "id") for s in subs if getattr(s, "id", None) is not None]
+
+        # Delete metrics tied to these submissions
+        if submission_ids:
+            try:
+                db.query(models.Metric).filter(models.Metric.submission_id.in_(submission_ids)).delete(synchronize_session=False)
+            except Exception:
+                # fallback: delete individually
+                for sid in submission_ids:
+                    for m in db.query(models.Metric).filter(models.Metric.submission_id == sid).all():
+                        db.delete(m)
+
+        # Delete submission rows
+        try:
+            db.query(models.Submission).filter(models.Submission.dataset_id == id).delete(synchronize_session=False)
+        except Exception:
+            # fallback: delete individually
+            for s in subs:
+                try:
+                    db.delete(s)
+                except Exception:
+                    logger.debug("failed to delete submission row", exc_info=True)
+
         # Store copy for response after deletion
         deleted_ds = schemas.DatasetOut.from_orm(ds)
-        # Delete DB row
+        # Delete dataset row
         db.delete(ds)
         db.commit()
+
         # Cleanup storage after DB commit (best-effort)
+        # remove dataset files
         remove_path(getattr(deleted_ds, "data_file_path", None))
         remove_path(getattr(deleted_ds, "groundtruth_path", None))
+
+        # remove submission artifacts
+        for p in submission_paths:
+            if not p:
+                continue
+            try:
+                if isinstance(p, str) and p.startswith("minio://"):
+                    # parse minio://bucket/object
+                    _, _, path = p.partition("://")
+                    bucket, _, obj = path.partition("/")
+                    try:
+                        minio_client.remove_object(bucket, obj)
+                    except Exception:
+                        logger.debug("MinIO remove_object for submission failed", exc_info=True)
+                else:
+                    # local filesystem – try to remove
+                    fp = p
+                    if not os.path.isabs(fp):
+                        fp = os.path.join(os.getcwd(), "app", "uploads", "submissions", fp)
+                    if os.path.exists(fp):
+                        try:
+                            os.unlink(fp)
+                        except Exception:
+                            logger.debug("Failed to unlink submission file", exc_info=True)
+            except Exception:
+                logger.debug("Failed to cleanup submission artifact", exc_info=True)
+
         return deleted_ds
     except Exception as e:
         logger.exception("Failed to delete dataset")
