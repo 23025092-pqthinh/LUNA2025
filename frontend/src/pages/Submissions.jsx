@@ -259,6 +259,37 @@ export default function Submissions() {
     }
   };
 
+  const recomputeSubmission = async (id) => {
+    if (!confirm("Recompute metrics for this submission?")) return;
+    try {
+      const headers = getHeaders();
+      const resp = await axios.post(`${API}/submissions/${id}/recompute`, null, { headers });
+      // update single submission in state with returned metrics
+      const updatedMetrics = resp.data?.metrics ?? resp.data;
+      if (updatedMetrics) {
+        setSubmissions((prev) =>
+          prev.map((it) => {
+            if (Number(it.id) !== Number(id)) return it;
+            const copy = { ...it };
+            copy.metrics = updatedMetrics;
+            ["acc", "f1", "precision", "recall", "auc"].forEach((k) => {
+              if (updatedMetrics[k] !== undefined) copy[k] = updatedMetrics[k];
+            });
+            // also set score alias
+            if (copy.acc !== undefined && copy.score === undefined) copy.score = copy.acc;
+            return copy;
+          })
+        );
+        setMsg("Recompute finished");
+      } else {
+        await loadAll();
+      }
+    } catch (err) {
+      console.error("recompute error", err);
+      alert("Failed to recompute submission: " + (err.response?.data?.detail || err.message));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-2xl font-semibold">Submissions</div>
@@ -395,6 +426,20 @@ export default function Submissions() {
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </button>
+                  ) : null}
+                  {/* admin-only: recompute metrics */}
+                  {user?.role === "admin" ? (
+                    <button
+                      type="button"
+                      className="btn-icon"
+                      title="Recompute metrics"
+                      onClick={() => recomputeSubmission(s.id)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <path d="M21 12a9 9 0 11-3-6.708" />
+                        <path d="M21 3v6h-6" />
                       </svg>
                     </button>
                   ) : null}
