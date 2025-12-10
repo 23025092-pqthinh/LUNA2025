@@ -268,7 +268,13 @@ def list_submissions(
                     ds = db.query(models.Dataset).filter(models.Dataset.id == int(d["dataset_id"])).first()
                 gt_path_attr = None
                 if ds:
-                    gt_path_attr = getattr(ds, "groundtruth_path", None) or getattr(ds, "groundtruth_csv", None) or getattr(ds, "groundtruth", None)
+                    # prefer explicit groundtruth fields but fall back to dataset file if present
+                    gt_path_attr = (
+                        getattr(ds, "groundtruth_path", None)
+                        or getattr(ds, "groundtruth_csv", None)
+                        or getattr(ds, "groundtruth", None)
+                        or getattr(ds, "data_file_path", None)
+                    )
 
                 # locate submission file path
                 sub_file_path = None
@@ -423,9 +429,11 @@ async def create_submission(
 
     # compute metrics if dataset provided (best-effort)
     metrics_payload = None
+    evaluation_error = None
     if dataset_id:
         ok, metrics_payload = _compute_and_persist_metrics(sub, db)
         if not ok:
+            evaluation_error = str(metrics_payload)
             logger.warning("Submission %s evaluation failed: %s", getattr(sub, "id", None), metrics_payload)
 
     # return best-effort summary (unchanged)
@@ -452,6 +460,11 @@ async def create_submission(
     for k in ("acc", "f1", "precision", "recall"):
         if hasattr(sub, k):
             out[k] = getattr(sub, k)
+    # include any evaluation error (so client can show reason)
+    if evaluation_error:
+        out["evaluation_error"] = evaluation_error
+    elif metrics_payload is not None:
+        out.setdefault("metrics", metrics_payload)
     return out
     
 
