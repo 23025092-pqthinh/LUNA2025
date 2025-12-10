@@ -4,8 +4,8 @@ import { Navigate, Link } from 'react-router-dom'
 
 export default function LoginPage(){
   const { login, token } = useAuth()
-  const [u, setU] = useState('admin')
-  const [p, setP] = useState('admin123')
+  const [u, setU] = useState('')
+  const [p, setP] = useState('')
   const [err, setErr] = useState('')
 
   if (token) return <Navigate to="/" />

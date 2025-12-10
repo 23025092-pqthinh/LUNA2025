@@ -61,8 +61,7 @@ def update_user(user_id: int, payload: dict = Body(...), db: Session = Depends(g
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     is_admin = getattr(current_user, "role", None) == "admin"
-    # students are not allowed to edit profiles (even their own)
-    # Also guard against legacy accounts that may be named like student<N> but have role 'user'
+    # detect legacy usernames like student<N> which may have wrong role
     username = getattr(current_user, "username", "") or ""
     is_student_username = False
     try:
@@ -71,16 +70,23 @@ def update_user(user_id: int, payload: dict = Body(...), db: Session = Depends(g
     except Exception:
         is_student_username = False
 
-    if not is_admin and (getattr(current_user, "role", None) == "student" or is_student_username):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students are not allowed to edit profiles")
+    is_student = getattr(current_user, "role", None) == "student" or is_student_username
 
+    # non-admins may only edit their own record
     if not is_admin and getattr(current_user, "id", None) != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
-    # allowed update fields for non-admins/admins
-    editable = {"username", "full_name", "email", "group_name"}
+    # allowed update fields depend on role:
+    # - admin: may edit common fields + role
+    # - non-admin regular user: may edit username, full_name, email, group_name
+    # - student: may NOT edit profile fields, but may change their password (handled separately)
     if is_admin:
-        editable.add("role")
+        editable = {"username", "full_name", "email", "group_name", "role"}
+    else:
+        if is_student:
+            editable = set()
+        else:
+            editable = {"username", "full_name", "email", "group_name"}
 
     # handle password separately if provided
     if "password" in payload:

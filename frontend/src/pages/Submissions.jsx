@@ -223,6 +223,42 @@ export default function Submissions() {
     }
   };
 
+  const downloadSubmissionFile = async (id, fallbackFilename) => {
+    try {
+      const headers = getHeaders();
+      const resp = await fetch(`${API}/submissions/${id}/download`, { headers });
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        const msg = errBody.detail || resp.statusText || `Download failed: ${resp.status}`;
+        alert(msg);
+        return;
+      }
+
+      const blob = await resp.blob();
+      // try to read filename from Content-Disposition header
+      let filename = fallbackFilename || "submission.csv";
+      const cd = resp.headers.get("content-disposition");
+      if (cd) {
+        const m = cd.match(/filename\*?=(?:UTF-8''")?\s*([^;\n]+)/i);
+        if (m && m[1]) {
+          filename = m[1].replace(/\"/g, "").trim();
+        }
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("download error", err);
+      alert("Failed to download file");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-2xl font-semibold">Submissions</div>
@@ -348,6 +384,20 @@ export default function Submissions() {
 
                 {/* actions */}
                 <div className="flex flex-col items-end gap-2">
+                  {(user?.role === "admin" || user?.id === ownerId) ? (
+                    <button
+                      type="button"
+                      className="btn-icon"
+                      title="Download"
+                      onClick={() => downloadSubmissionFile(s.id, s.filename)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </button>
+                  ) : null}
                   {(user?.role === "admin" || user?.id === ownerId) && (
                     <button className="btn-icon btn-icon-danger" title="Delete submission" onClick={() => deleteSubmission(s.id, ownerId)}>
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">

@@ -237,13 +237,18 @@ export default function Users() {
 
             <div>
               <label className="text-xs muted">Password (leave empty to keep)</label>
-              <input className="input" type="password" value={edit.password || ''} onChange={e=>setEdit(s=>({...s, password: e.target.value}))} disabled={isStudentSelf} />
+              <input className="input" type="password" value={edit.password || ''} onChange={e=>setEdit(s=>({...s, password: e.target.value}))} />
             </div>
 
             <div className="col-span-2 flex items-center gap-3 mt-2">
-              <button className="btn" onClick={()=>updateUser(selected.id, edit)} disabled={isStudentSelf}>Save</button>
+              {(() => {
+                const canSave = isAdmin || !isStudentSelf || (isStudentSelf && edit.password && String(edit.password).length > 0)
+                return (
+                  <button className="btn" onClick={()=>updateUser(selected.id, edit)} disabled={!canSave}>Save</button>
+                )
+              })()}
               {isStudentSelf && (
-                <div className="text-sm text-yellow-700 ml-3">Students are not allowed to edit their profile.</div>
+                <div className="text-sm text-yellow-700 ml-3">Students may only change their password.</div>
               )}
             </div>
           </div>

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 import os
 import json
@@ -7,6 +8,7 @@ import uuid
 import tempfile
 import logging
 import shutil
+import mimetypes
 import urllib.request
 from urllib.parse import urlparse
 from minio import Minio
@@ -608,6 +610,57 @@ def recompute_submission(
     if not ok:
         raise HTTPException(status_code=400, detail=f"Recompute failed: {info}")
     return {"id": submission_id, "metrics": info}
+
+
+@router.get("/{submission_id}/download")
+def download_submission(
+    submission_id: int,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Download a submission file. Only admin or the submission owner may download."""
+    sub = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    owner_id = getattr(sub, "user_id", None)
+    if owner_id is None:
+        owner_id = getattr(sub, "uploader_id", None)
+    if getattr(current_user, "role", None) != "admin" and owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to download this submission")
+
+    # locate submission file (prefer storage/minio URI, otherwise local path)
+    file_ref = None
+    for attr in ("file_path", "path", "storage_path", "file_name", "filename"):
+        if hasattr(sub, attr) and getattr(sub, attr):
+            file_ref = getattr(sub, attr)
+            break
+
+    if not file_ref:
+        raise HTTPException(status_code=404, detail="No file associated with this submission")
+
+    # If stored in MinIO, download to temp file and serve with background cleanup
+    if isinstance(file_ref, str) and file_ref.startswith("minio://"):
+        tmp = _download_minio_object(file_ref)
+        if not tmp or not os.path.exists(tmp):
+            raise HTTPException(status_code=502, detail="Failed to retrieve file from storage")
+        filename = getattr(sub, "filename", None) or getattr(sub, "file_name", None) or os.path.basename(tmp)
+        content_type, _ = mimetypes.guess_type(filename)
+        content_type = content_type or "application/octet-stream"
+        background.add_task(lambda p: os.remove(p) if os.path.exists(p) else None, tmp)
+        return FileResponse(tmp, media_type=content_type, filename=str(filename), background=background)
+
+    # Otherwise treat as local path (maybe relative)
+    actual_path = file_ref
+    if not os.path.isabs(actual_path):
+        actual_path = os.path.join(os.getcwd(), "app", "uploads", "submissions", actual_path)
+    if not os.path.exists(actual_path):
+        raise HTTPException(status_code=404, detail="Submission file not found on server")
+    filename = getattr(sub, "filename", None) or getattr(sub, "file_name", None) or os.path.basename(actual_path)
+    content_type, _ = mimetypes.guess_type(filename)
+    content_type = content_type or "application/octet-stream"
+    return FileResponse(actual_path, media_type=content_type, filename=str(filename))
 
 
 @router.post("/recompute", status_code=200)
