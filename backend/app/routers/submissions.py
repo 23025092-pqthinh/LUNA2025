@@ -546,11 +546,38 @@ def _compute_and_persist_metrics(sub: "models.Submission", db: Session):
 
         metrics_result = None
         errors = []
+        # log files used for evaluation (only short preview to avoid huge logs)
+        try:
+            def _preview_file(path, n=5):
+                try:
+                    with open(path, 'r', encoding='utf-8') as fh:
+                        lines = []
+                        for _ in range(n):
+                            l = fh.readline()
+                            if not l:
+                                break
+                            lines.append(l.strip())
+                        return lines
+                except Exception:
+                    return []
+
+            logger.debug("_compute_and_persist_metrics: gt_local=%s sub_local=%s", gt_local, sub_local)
+            logger.debug("_compute_and_persist_metrics: gt_preview=%s", _preview_file(gt_local, 3))
+            logger.debug("_compute_and_persist_metrics: sub_preview=%s", _preview_file(sub_local, 3))
+        except Exception:
+            pass
+
         for scorer in (evaluate.evaluate_predictions, evaluate.compute_classification_metrics):
             try:
+                logger.debug("_compute_and_persist_metrics: attempting scorer %s", getattr(scorer, '__name__', str(scorer)))
                 metrics_result = scorer(gt_local, sub_local)
+                logger.debug("_compute_and_persist_metrics: scorer %s returned: %s", getattr(scorer, '__name__', str(scorer)), {k: metrics_result.get(k) for k in ('auc','f1','acc') if isinstance(metrics_result, dict)})
                 break
             except Exception as exc:
+                import traceback
+                tb = traceback.format_exc()
+                logger.warning("Submission %s scorer %s raised: %s", getattr(sub, "id", None), getattr(scorer, '__name__', str(scorer)), str(exc))
+                logger.debug("Submission %s scorer traceback:\n%s", getattr(sub, "id", None), tb)
                 errors.append(str(exc))
 
         if not isinstance(metrics_result, dict):
@@ -606,6 +633,9 @@ def recompute_submission(
     sub = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")
+    # admin-only operation
+    if getattr(current_user, "role", None) != "admin":
+        raise HTTPException(status_code=403, detail="admin required")
     ok, info = _compute_and_persist_metrics(sub, db)
     if not ok:
         raise HTTPException(status_code=400, detail=f"Recompute failed: {info}")
