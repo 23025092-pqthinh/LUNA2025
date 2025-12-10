@@ -18,3 +18,6 @@
 **/*.swp
 backend/dev.db
 *.db
+*.pyc
+xl.meta
+__pycache__/
