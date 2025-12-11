@@ -31,11 +31,12 @@ def seed(db: Session):
     ]
 
     # Create students student1..student20 each mapped to Group 1..Group 20
-    for i in range(1, 21):
+    # Add nhom1..nhom24 accounts (keep existing accounts unchanged)
+    for i in range(1, 25):
         desired.append({
-            "username": f"student{i}",
-            "password": "student123",
-            "full_name": f"Student {i}",
+            "username": f"nhom{i}",
+            "password": "P4ssw0rd!",
+            "full_name": f"Nhom {i}",
             "role": "student",
             "group_name": f"Group {i}",
         })
