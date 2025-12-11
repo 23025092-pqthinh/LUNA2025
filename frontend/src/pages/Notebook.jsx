@@ -11,7 +11,7 @@ export default function Notebook(){
       <div className="card bg-amber-50 p-4 my-4">
         <div className="font-semibold mb-1">Hướng dẫn nhanh:</div>
         <ul className="list-disc ml-6 text-sm">
-          <li>Truy cập JupyterLite: <a href="https://quay.io/repository/jupyter/datascience-notebook?tab=tags&tag=latest" className="text-blue-600 underline">https://quay.io/repository/jupyter/datascience-notebook?tab=tags&tag=latest</a></li>
+          <li>Truy cập JupyterHub: <a href="http://34.72.34.87:8888" className="text-blue-600 underline">http://34.72.34.87:8888</a></li>
           <li>Tài khoản đăng nhập: Sử dụng tài khoản đăng nhập hệ thống để truy cập JupyterLite.</li>
           <li>Chỉnh sửa, chạy mã Python như bình thường. Nếu bị lỗi kernel, refresh lại trang.</li>
         </ul>
