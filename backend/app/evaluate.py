@@ -71,6 +71,11 @@ def _coerce_binary_labels(label_series: pd.Series, score_series: pd.Series) -> p
 
 
 def evaluate_predictions(ground_truth_path, predict_path):
+    if not os.path.exists(ground_truth_path):
+        raise FileNotFoundError(f"Ground truth not found: {ground_truth_path}")
+    if not os.path.exists(predict_path):
+        raise FileNotFoundError(f"Prediction file not found: {predict_path}")
+
     df_true = pd.read_csv(ground_truth_path)
     df_pred = pd.read_csv(predict_path)
     if "id" not in df_true.columns or "label" not in df_true.columns:
@@ -78,6 +83,7 @@ def evaluate_predictions(ground_truth_path, predict_path):
     if "id" not in df_pred.columns:
         raise ValueError("Prediction CSV must contain an id column")
 
+    compute_auc = True
     if "label_pred" in df_pred.columns:
         score_column = "label_pred"
     else:
@@ -85,8 +91,7 @@ def evaluate_predictions(ground_truth_path, predict_path):
         score_column = next((col for col in df_pred.columns if col.lower() in preferred), None)
         if score_column is None and "label" in df_pred.columns:
             score_column = "label"
-        if score_column is None:
-            raise ValueError("Prediction CSV must have a probability column (label_pred/probability/score)")
+            compute_auc = False
 
     merged = pd.merge(df_true[["id","label"]], df_pred[["id", score_column]], on="id", how="inner")
     if merged.empty:
@@ -95,11 +100,14 @@ def evaluate_predictions(ground_truth_path, predict_path):
     score_series = merged[score_column]
     y_score = pd.to_numeric(score_series, errors="raise")
     y_true = _coerce_binary_labels(merged["label"], y_score)
-    try:
-        auc = float(roc_auc_score(y_true, y_score))
-    except Exception as exc:
-        auc = None
-        logger.warning("evaluate_predictions: failed to compute ROC AUC (%s)", exc)
+
+    auc = 0
+    if compute_auc:
+        try:
+            auc = float(roc_auc_score(y_true, y_score))
+        except Exception as exc:
+            auc = 0
+            logger.warning("evaluate_predictions: failed to compute ROC AUC (%s)", exc)
     y_hat = (y_score >= 0.5).astype(int)
     f1 = float(f1_score(y_true, y_hat, zero_division=0))
     acc = float(accuracy_score(y_true, y_hat))
