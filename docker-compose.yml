@@ -1,16 +1,28 @@
 services:
   backend:
     build: ./backend
+    container_name: be    
     env_file:
       - ./backend/.env
     volumes:
       - ./backend/app/uploads:/app/app/uploads
     ports:
       - "8000:8000"
+    networks:
+      - jhubnet      
 
   frontend:
     build: ./frontend
+    container_name: fe   
+    env_file:s
+      - ./frontend/.env     
     ports:
       - "5173:80"
     depends_on:
       - backend
+    networks:
+      - jhubnet
+
+networks:
+  jhubnet:
+    name: jhubnet
