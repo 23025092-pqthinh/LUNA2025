@@ -1,0 +1,34 @@
+name: Build & Deploy via Docker Compose on GCP Runner
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy with Docker Compose
+    runs-on: agent-luna
+    # optional: require your runner labels
+    # labels: [vm-gcp]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Ensure Docker is installed
+      run: |
+        docker --version
+        docker compose version || docker-compose --version
+
+    - name: Stop old containers (optional)
+      run: |
+        docker compose down || docker-compose down || true
+
+    - name: Build images & start services
+      run: |
+        docker compose up -d --build || docker-compose up -d --build
+
+    - name: Cleanup old images/containers (optional but recommended)
+      run: |
+        docker system prune -af
