@@ -14,7 +14,7 @@ services:
   frontend:
     build: ./frontend
     container_name: fe   
-    env_file:s
+    env_file:
       - ./frontend/.env     
     ports:
       - "5173:80"
