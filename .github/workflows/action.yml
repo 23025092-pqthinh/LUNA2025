@@ -29,6 +29,7 @@ jobs:
       run: |
         docker compose up -d --build || docker-compose up -d --build
 
-    - name: Cleanup old images/containers (optional but recommended)
+    - name: Cleanup old frontend and backend images
       run: |
-        docker system prune -af
+        docker images | grep -E "frontend|backend" | awk '{print $3}' | xargs -r docker rmi -f
+
