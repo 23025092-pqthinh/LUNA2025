@@ -125,7 +125,7 @@ export default function Users() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">User Management</h2>
-        <div className="text-sm muted">{isAdmin ? 'Admins only (full access)' : 'Your profile'}</div>
+        <div className="text-sm muted">{isAdmin ? '' : 'Your profile'}</div>
       </div>
 
       <div className="card p-4">
