@@ -11,9 +11,8 @@ export default function Notebook(){
       <div className="card bg-amber-50 p-4 my-4">
         <div className="font-semibold mb-1">Hướng dẫn nhanh:</div>
         <ul className="list-disc ml-6 text-sm">
-          <li>Notebook này chạy hoàn toàn trong trình duyệt (không cần cài server Jupyter).</li>
-          <li>Chọn <b>dataset_id</b> trong URL để load dữ liệu mẫu.</li>
-          <li>Có thể thử <code>!pip install package_name</code> để cài thêm thư viện (nếu được hỗ trợ bên trong JupyterLite).</li>
+          <li>Truy cập JupyterLite: <a href="https://quay.io/repository/jupyter/datascience-notebook?tab=tags&tag=latest" className="text-blue-600 underline">https://quay.io/repository/jupyter/datascience-notebook?tab=tags&tag=latest</a></li>
+          <li>Tài khoản đăng nhập: Sử dụng tài khoản đăng nhập hệ thống để truy cập JupyterLite.</li>
           <li>Chỉnh sửa, chạy mã Python như bình thường. Nếu bị lỗi kernel, refresh lại trang.</li>
         </ul>
       </div>
