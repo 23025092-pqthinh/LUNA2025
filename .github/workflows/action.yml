@@ -2,15 +2,14 @@ name: Build & Deploy via Docker Compose on GCP Runner
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
+
   workflow_dispatch:
 
 jobs:
   deploy:
     name: Build & Deploy with Docker Compose
     runs-on: self-hosted
-    # optional: require your runner labels
-    # labels: [vm-gcp]
 
     steps:
     - name: Checkout repository
