@@ -28,7 +28,3 @@ jobs:
       run: |
         docker compose up -d --build || docker-compose up -d --build
 
-    - name: Cleanup old frontend and backend images
-      run: |
-        docker images | grep -E "frontend|backend" | awk '{print $3}' | xargs -r docker rmi -f
-
