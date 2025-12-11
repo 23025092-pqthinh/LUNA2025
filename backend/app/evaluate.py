@@ -14,28 +14,22 @@ import os
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 def analyze_groundtruth(ground_truth_path):
-    """
-    Read ground truth CSV then return basic metric.
-    Col: AnnotationID, label
-    """
-    if not os.path.exists(ground_truth_path):
-        raise FileNotFoundError(f"Ground truth not found: {ground_truth_path}")
-
-    df = pd.read_csv(ground_truth_path, dtype=object)
-    stats: Dict[str, Any] = {}
+    df = pd.read_csv(ground_truth_path)
+    stats = {}
     cols = df.columns.tolist()
     stats['columns'] = cols
-    required = ['AnnotationID', 'label']
-    for r in required:
-        if r not in cols:
-            raise ValueError(f"Ground truth CSV missing required column: {r}")
-
-    # Basic counts
+    missing_id = 'id' not in cols
+    missing_label = 'label' not in cols
+    stats['schema_valid'] = not (missing_id or missing_label)
+    if not stats['schema_valid']:
+        stats['errors'] = []
+        if missing_id: stats['errors'].append("Missing 'id' column")
+        if missing_label: stats['errors'].append("Missing 'label' column")
+        return stats
     stats['total_rows'] = int(len(df))
-    # Null / empty checks
+    stats['null_id'] = int(df['id'].isna().sum())
     stats['null_label'] = int(df['label'].isna().sum())
     stats['duplicate_id'] = int(df['id'].duplicated().sum())
     try:
