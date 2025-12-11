@@ -1,16 +1,4 @@
 services:
-  # db:
-  #   image: postgres:15
-  #   restart: always
-  #   environment:
-  #     POSTGRES_USER: luna
-  #     POSTGRES_PASSWORD: luna
-  #     POSTGRES_DB: luna25
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"
-
   backend:
     build: ./backend
     env_file:
@@ -19,8 +7,6 @@ services:
       - ./backend/app/uploads:/app/app/uploads
     ports:
       - "8000:8000"
-    depends_on:
-      - db
 
   frontend:
     build: ./frontend
@@ -28,6 +14,3 @@ services:
       - "5173:80"
     depends_on:
       - backend
-
-volumes:
-  pgdata:
