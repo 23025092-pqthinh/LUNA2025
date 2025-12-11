@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     name: Build & Deploy with Docker Compose
-    runs-on: agent-luna
+    runs-on: self-hosted
     # optional: require your runner labels
     # labels: [vm-gcp]
 
