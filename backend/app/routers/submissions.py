@@ -241,6 +241,10 @@ def list_submissions(
 
         if isinstance(metrics, dict):
             metrics = _normalize_score_json(metrics)
+            # Present missing AUC as a dash for client display (keep DB storage as null)
+            if metrics.get("auc") is None:
+                metrics["auc"] = "-"
+                metrics["AUC"] = "-"
             d["score_json"] = metrics
 
         for k in ("f1", "precision", "recall", "acc", "score"):
