@@ -349,35 +349,35 @@ export default function Submissions() {
               <div className="flex items-center gap-4">
                 {/* metrics card (moved slightly left) */}
                 <div className="w-100 mr-10 bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm flex items-center space-x-6">
-                  {/* four metrics horizontally with extra spacing */}
+                  {/* AUC placed at left, all metrics show 4 decimal places */}
+                  <div className="flex-1 text-center min-w-[64px]">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">AUC</div>
+                    <div className="text-2xl text-indigo-600 font-semibold">
+                      {s.auc !== undefined ? Number(s.auc).toFixed(4) : "—"}
+                    </div>
+                  </div>
                   <div className="flex-1 text-center min-w-[64px]">
                     <div className="text-xs text-gray-500 uppercase tracking-wide">F1</div>
                     <div className="text-2xl text-indigo-600 font-semibold">
-                      {s.f1 !== undefined ? Number(s.f1).toFixed(3) : "—"}
+                      {s.f1 !== undefined ? Number(s.f1).toFixed(4) : "—"}
                     </div>
                   </div>
                   <div className="flex-1 text-center min-w-[64px]">
                     <div className="text-xs text-gray-500 uppercase tracking-wide">Precision</div>
                     <div className="text-2xl text-indigo-600 font-semibold">
-                      {s.precision !== undefined ? Number(s.precision).toFixed(3) : "—"}
+                      {s.precision !== undefined ? Number(s.precision).toFixed(4) : "—"}
                     </div>
                   </div>
                   <div className="flex-1 text-center min-w-[64px]">
                     <div className="text-xs text-gray-500 uppercase tracking-wide">Accuracy</div>
                     <div className="text-2xl text-indigo-600 font-semibold">
-                      {s.acc !== undefined ? Number(s.acc).toFixed(3) : "—"}
+                      {s.acc !== undefined ? Number(s.acc).toFixed(4) : "—"}
                     </div>
                   </div>
                   <div className="flex-1 text-center min-w-[64px]">
                     <div className="text-xs text-gray-500 uppercase tracking-wide">Recall</div>
                     <div className="text-2xl text-indigo-600 font-semibold">
-                      {s.recall !== undefined ? Number(s.recall).toFixed(3) : "—"}
-                    </div>
-                  </div>
-                  <div className="flex-1 text-center min-w-[64px]">
-                    <div className="text-xs text-gray-500 uppercase tracking-wide">AUC</div>
-                    <div className="text-2xl text-indigo-600 font-semibold">
-                      {s.auc !== undefined ? Number(s.auc).toFixed(3) : "—"}
+                      {s.recall !== undefined ? Number(s.recall).toFixed(4) : "—"}
                     </div>
                   </div>
                 </div>
