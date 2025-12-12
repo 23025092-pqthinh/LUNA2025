@@ -332,6 +332,23 @@ async def create_submission(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    # Normalize dataset_id: treat empty strings or whitespace as no dataset
+    if isinstance(dataset_id, str):
+        dataset_id = dataset_id.strip() or None
+
+    # Require dataset selection for submissions
+    if dataset_id is None:
+        raise HTTPException(status_code=400, detail="dataset_id is required")
+
+    # validate dataset exists (if numeric id provided)
+    try:
+        ds_id_int = int(dataset_id)
+        ds_obj = db.query(models.Dataset).filter(models.Dataset.id == ds_id_int).first()
+        if not ds_obj:
+            raise HTTPException(status_code=400, detail="dataset_id not found")
+    except ValueError:
+        # non-integer dataset ids are invalid
+        raise HTTPException(status_code=400, detail="invalid dataset_id")
     # save uploaded file to MinIO
     try:
         if not is_minio_ready():
