@@ -12,8 +12,6 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="LUNA25 Evaluation System")
 
 app.add_middleware(
@@ -27,10 +25,10 @@ app.add_middleware(
 def init_db():
     """Initialize database with tables and seed data."""
     from .seeders import seed_all
-    
-    # Create database tables
+
+    # Create database tables (only when explicitly requested)
     Base.metadata.create_all(bind=engine)
-    
+
     # Seed initial data
     db = SessionLocal()
     try:
@@ -38,8 +36,8 @@ def init_db():
     finally:
         db.close()
 
-# Initialize database on startup
 init_db()
+
 
 app.include_router(auth.router)
 app.include_router(users.router)
