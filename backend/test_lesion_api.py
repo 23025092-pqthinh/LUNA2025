@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Manual test script for the POST /api/apitest/v1/predict/lesion endpoint
+Manual test script for the POST /apitest/v1/predict/lesion endpoint
 This script demonstrates how to call the endpoint with proper formatting
 """
 
@@ -8,7 +8,7 @@ import requests
 import io
 
 # Configuration
-API_URL = "http://localhost:8000/api/apitest/v1/predict/lesion"
+API_URL = "http://localhost:8000/apitest/v1/predict/lesion"
 # In production, use a valid JWT token
 AUTH_TOKEN = "Bearer test_token_replace_with_real_jwt"
 
