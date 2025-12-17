@@ -12,8 +12,8 @@ npm run dev
 ```bash
 cd backend
 pip install --no-cache-dir -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
+python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug --env-file .env
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/luna"
 uvicorn app.main:app --reload
 ```

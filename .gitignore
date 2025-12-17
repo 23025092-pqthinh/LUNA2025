@@ -21,3 +21,4 @@ backend/dev.db
 *.pyc
 xl.meta
 __pycache__/
+*/*.pyc
