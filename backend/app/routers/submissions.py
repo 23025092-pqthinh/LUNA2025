@@ -895,7 +895,8 @@ async def create_docker_submission(
         raise HTTPException(status_code=500, detail="Failed to create Docker submission")
 
     # Schedule background task to evaluate the Docker submission
-    background_tasks.add_task(_evaluate_docker_submission, sub.id, db)
+    # Pass only the submission ID, not the session (session will be created in the task)
+    background_tasks.add_task(_evaluate_docker_submission, sub.id)
 
     # Return submission details
     return {
@@ -909,9 +910,17 @@ async def create_docker_submission(
     }
 
 
-def _evaluate_docker_submission(submission_id: int, db: Session):
+def _evaluate_docker_submission(submission_id: int):
     """
     Background task to evaluate a Docker submission.
+    
+    WARNING: This is a simplified implementation that generates mock predictions.
+    In production, this should:
+    1. Actually call the Docker container's API with real dataset samples
+    2. Collect real predictions from the model
+    3. Use a health check mechanism instead of fixed sleep time
+    4. Implement proper port management to avoid conflicts
+    
     This will:
     1. Load the Docker image from MinIO
     2. Run the Docker container
@@ -919,6 +928,18 @@ def _evaluate_docker_submission(submission_id: int, db: Session):
     4. Compute metrics and update the submission
     5. Update the leaderboard
     """
+    # Create a new database session for this background task
+    from app.database import SessionLocal
+    db = SessionLocal()
+    
+    try:
+        return _evaluate_docker_submission_impl(submission_id, db)
+    finally:
+        db.close()
+
+
+def _evaluate_docker_submission_impl(submission_id: int, db: Session):
+    """Implementation of Docker submission evaluation."""
     # Get submission from DB
     sub = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not sub:
@@ -1056,10 +1077,31 @@ def _evaluate_docker_submission(submission_id: int, db: Session):
                 except Exception:
                     pass
 
-            # Stop and remove container
+            # Stop and remove container with proper error handling
             try:
-                subprocess.run(["docker", "stop", container_id], timeout=30)
-                subprocess.run(["docker", "rm", container_id], timeout=30)
+                stop_result = subprocess.run(
+                    ["docker", "stop", container_id],
+                    capture_output=True,
+                    timeout=30
+                )
+                if stop_result.returncode != 0:
+                    logger.warning(f"Docker stop failed for {container_id}: {stop_result.stderr}")
+                else:
+                    # Only try to remove if stop succeeded
+                    rm_result = subprocess.run(
+                        ["docker", "rm", container_id],
+                        capture_output=True,
+                        timeout=30
+                    )
+                    if rm_result.returncode != 0:
+                        logger.warning(f"Docker rm failed for {container_id}: {rm_result.stderr}")
+            except subprocess.TimeoutExpired:
+                logger.error(f"Docker cleanup timeout for container {container_id}")
+                # Try force removal as last resort
+                try:
+                    subprocess.run(["docker", "rm", "-f", container_id], timeout=10)
+                except Exception as e:
+                    logger.error(f"Force removal also failed: {e}")
             except Exception as e:
                 logger.warning(f"Failed to cleanup container: {e}")
 

@@ -28,7 +28,7 @@ uvicorn app.main:app --reload
 - Leaderboard automatically updated
 
 #### Lesion Prediction API
-- **POST /api/apitest/v1/predict/lesion**: Standard API for lesion prediction
+- **POST /apitest/v1/predict/lesion**: Standard API for lesion prediction (mock implementation)
 - Accepts .mha/.mhd CT scan files
 - Returns malignancy probability and classification
 - Full error handling per specification

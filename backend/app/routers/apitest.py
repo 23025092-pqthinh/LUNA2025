@@ -77,10 +77,18 @@ async def predict_lesion(
     db: Session = Depends(get_db)
 ):
     """
-    POST /api/v1/predict/lesion - Endpoint for lesion prediction
+    POST /apitest/v1/predict/lesion - Endpoint for lesion prediction
     
     Accepts .mha/.mhd file and metadata, returns prediction for lung nodule.
-    This is a test endpoint that validates the API contract.
+    
+    **IMPORTANT**: This is a MOCK/TEST implementation that returns random predictions.
+    In production, this endpoint should:
+    1. Load the actual LUNA model
+    2. Process the .mha file to extract the lesion region
+    3. Run inference using the trained model
+    4. Return real predictions based on the model output
+    
+    This test implementation validates the API contract and data formats.
     """
     # Validate authorization
     if not authorization:

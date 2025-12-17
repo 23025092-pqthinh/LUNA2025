@@ -4,9 +4,11 @@
 
 ### 1. Lesion Prediction API
 
-#### POST /api/apitest/v1/predict/lesion
+#### POST /apitest/v1/predict/lesion
 
 Endpoint for predicting lung lesion malignancy from CT scan images.
+
+**Note:** This is a mock/test implementation. In production, this should be connected to the actual LUNA model inference service.
 
 **Content-Type:** `multipart/form-data`
 
@@ -73,7 +75,7 @@ Endpoint for predicting lung lesion malignancy from CT scan images.
 **Example Usage (cURL):**
 
 ```bash
-curl -X POST "http://localhost:8000/api/apitest/v1/predict/lesion" \
+curl -X POST "http://localhost:8000/apitest/v1/predict/lesion" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -F "file=@scan.mha" \
   -F "seriesInstanceUID=1.2.840.113654.2.55.323804676332963457174235140303454945005" \
@@ -92,7 +94,7 @@ curl -X POST "http://localhost:8000/api/apitest/v1/predict/lesion" \
 ```python
 import requests
 
-url = "http://localhost:8000/api/apitest/v1/predict/lesion"
+url = "http://localhost:8000/apitest/v1/predict/lesion"
 headers = {"Authorization": "Bearer YOUR_JWT_TOKEN"}
 
 files = {'file': open('scan.mha', 'rb')}

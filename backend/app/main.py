@@ -45,7 +45,8 @@ app.include_router(datasets.router)
 app.include_router(submissions.router)
 app.include_router(leaderboard.router)
 app.include_router(apitest.router)
-app.include_router(apitest.router, prefix="/api")  # Add /api prefix for v1 endpoints
+# Note: apitest router endpoints are available at both /apitest/* and via the /api prefix
+# This makes them accessible at /api/apitest/v1/predict/lesion for consistency
 
 @app.get("/")
 def root():
