@@ -30,8 +30,14 @@ class Submission(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     dataset_id = Column(Integer, ForeignKey("datasets.id"))
-    file_path = Column(Text)  # CSV id,label_pred
+    file_path = Column(Text)  # CSV id,label_pred OR docker image path
+    submission_type = Column(String(20), default="csv")  # 'csv' or 'docker'
+    docker_image_path = Column(Text)  # MinIO path to docker image
+    docker_image_name = Column(String(200))  # Docker image name/tag
+    model_endpoint = Column(Text)  # API endpoint for model testing
     evaluated = Column(Boolean, default=False)
+    evaluation_status = Column(String(20), default="pending")  # pending, running, completed, failed
+    evaluation_error = Column(Text)  # Error message if evaluation fails
     score_json = Column(JSON)  # {"AUC":..., "F1":...,"ROC":{...},"PR":{...}}
     created_at = Column(TIMESTAMP, server_default=func.now())
 

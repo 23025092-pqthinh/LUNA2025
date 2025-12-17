@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Header
 from sqlalchemy.orm import Session
+from typing import Optional
 from ..database import get_db
 from ..deps import get_current_user, require_admin
 from .. import models
 import os, time, httpx
+from datetime import datetime
 
 router = APIRouter(prefix="/apitest", tags=["apitest"])
 
@@ -57,3 +59,113 @@ def call_model(url: str = Form(...), sample_name: str = Form(...), db: Session =
     )
     db.add(log); db.commit()
     return {"status_code": status, "latency_ms": elapsed, "preview": preview}
+
+
+@router.post("/v1/predict/lesion")
+async def predict_lesion(
+    file: UploadFile = File(...),
+    seriesInstanceUID: str = Form(...),
+    lesionID: int = Form(...),
+    coordX: float = Form(...),
+    coordY: float = Form(...),
+    coordZ: float = Form(...),
+    patientID: Optional[str] = Form(None),
+    studyDate: Optional[str] = Form(None),
+    ageAtStudyDate: Optional[int] = Form(None),
+    gender: Optional[str] = Form(None),
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    """
+    POST /api/v1/predict/lesion - Endpoint for lesion prediction
+    
+    Accepts .mha/.mhd file and metadata, returns prediction for lung nodule.
+    This is a test endpoint that validates the API contract.
+    """
+    # Validate authorization
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail={"error_code": "UNAUTHORIZED", "message": "Authorization header required"}
+        )
+    
+    # Validate file format
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "INVALID_FILE_FORMAT", "message": "No file provided"}
+        )
+    
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in ['.mha', '.mhd']:
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "INVALID_FILE_FORMAT", "message": "File must be .mha or .mhd format"}
+        )
+    
+    # Validate gender if provided
+    if gender and gender not in ['Male', 'Female']:
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "INVALID_FILE_FORMAT", "message": "Gender must be 'Male' or 'Female'"}
+        )
+    
+    # Process the request (mock implementation)
+    start_time = time.perf_counter()
+    
+    try:
+        # Read file content (in real implementation, this would be processed by the model)
+        content = await file.read()
+        if not content:
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "INVALID_FILE_FORMAT", "message": "Empty file"}
+            )
+        
+        # Mock prediction (in production, this would call the actual model)
+        # For now, return a mock response that demonstrates the API format
+        import random
+        probability = random.uniform(0.1, 0.99)
+        prediction_label = 1 if probability >= 0.5 else 0
+        
+        processing_time = int((time.perf_counter() - start_time) * 1000)
+        
+        # Log the API call
+        log = models.ApiLog(
+            request_url=f"/api/v1/predict/lesion",
+            status_code=200,
+            response_time=float(processing_time),
+            result_preview=f"Lesion {lesionID}: {probability:.3f}"
+        )
+        db.add(log)
+        db.commit()
+        
+        return {
+            "status": "success",
+            "data": {
+                "seriesInstanceUID": seriesInstanceUID,
+                "lesionID": lesionID,
+                "probability": round(probability, 3),
+                "predictionLabel": prediction_label,
+                "processingTimeMs": processing_time
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as ex:
+        # Log error
+        processing_time = int((time.perf_counter() - start_time) * 1000)
+        log = models.ApiLog(
+            request_url=f"/api/v1/predict/lesion",
+            status_code=422,
+            response_time=float(processing_time),
+            result_preview=f"ERROR: {str(ex)}"
+        )
+        db.add(log)
+        db.commit()
+        
+        raise HTTPException(
+            status_code=422,
+            detail={"error_code": "PROCESSING_ERROR", "message": str(ex)}
+        )
