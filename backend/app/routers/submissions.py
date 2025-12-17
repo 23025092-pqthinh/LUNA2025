@@ -11,11 +11,18 @@ import shutil
 import mimetypes
 import urllib.request
 from urllib.parse import urlparse
+import subprocess
+import csv
+import time as time_module
+import random as random_module
 from minio import Minio
 from app import models, evaluate
 from app.deps import get_db, get_current_user
 
 router = APIRouter(prefix="/submissions", tags=["submissions"])
+
+# Configuration constants
+DOCKER_STARTUP_WAIT_SECONDS = int(os.getenv("DOCKER_STARTUP_WAIT_SECONDS", "10"))  # Time to wait for Docker container to be ready
 
 # MinIO configuration (re-use dataset env vars if available)
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
@@ -912,10 +919,6 @@ def _evaluate_docker_submission(submission_id: int, db: Session):
     4. Compute metrics and update the submission
     5. Update the leaderboard
     """
-    import subprocess
-    import tempfile
-    import csv
-    
     # Get submission from DB
     sub = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not sub:
@@ -993,9 +996,9 @@ def _evaluate_docker_submission(submission_id: int, db: Session):
 
             container_id = run_result.stdout.strip()
             
-            # Wait for container to be ready (simple sleep for now)
-            import time
-            time.sleep(10)
+            # Wait for container to be ready
+            # This delay allows the Docker container to fully start and be ready to accept requests
+            time_module.sleep(DOCKER_STARTUP_WAIT_SECONDS)
 
             # Test the model with dataset samples
             # For now, create a mock predictions file
@@ -1009,8 +1012,7 @@ def _evaluate_docker_submission(submission_id: int, db: Session):
                 # Generate some mock predictions
                 # In real implementation, read dataset and call model API
                 for i in range(1, 11):
-                    import random
-                    prob = random.uniform(0.1, 0.9)
+                    prob = random_module.uniform(0.1, 0.9)
                     label = 1 if prob >= 0.5 else 0
                     writer.writerow([i, label, prob])
                 
