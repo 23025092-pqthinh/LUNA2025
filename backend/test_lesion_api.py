@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Manual test script for the POST /api/v1/predict/lesion endpoint
+Manual test script for the POST /api/apitest/v1/predict/lesion endpoint
 This script demonstrates how to call the endpoint with proper formatting
 """
 

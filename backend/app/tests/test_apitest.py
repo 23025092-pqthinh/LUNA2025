@@ -103,7 +103,7 @@ def test_predict_lesion_endpoint_invalid_gender():
     )
     
     assert response.status_code == 400
-    assert "INVALID_FILE_FORMAT" in str(response.json())
+    assert "VALIDATION_ERROR" in str(response.json())
 
 
 def test_predict_lesion_endpoint_empty_file():

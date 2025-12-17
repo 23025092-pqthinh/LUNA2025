@@ -4,7 +4,7 @@ from typing import Optional
 from ..database import get_db
 from ..deps import get_current_user, require_admin
 from .. import models
-import os, time, httpx
+import os, time, httpx, random
 from datetime import datetime
 
 router = APIRouter(prefix="/apitest", tags=["apitest"])
@@ -107,7 +107,7 @@ async def predict_lesion(
     if gender and gender not in ['Male', 'Female']:
         raise HTTPException(
             status_code=400,
-            detail={"error_code": "INVALID_FILE_FORMAT", "message": "Gender must be 'Male' or 'Female'"}
+            detail={"error_code": "VALIDATION_ERROR", "message": "Gender must be 'Male' or 'Female'"}
         )
     
     # Process the request (mock implementation)
@@ -124,7 +124,6 @@ async def predict_lesion(
         
         # Mock prediction (in production, this would call the actual model)
         # For now, return a mock response that demonstrates the API format
-        import random
         probability = random.uniform(0.1, 0.99)
         prediction_label = 1 if probability >= 0.5 else 0
         
@@ -154,18 +153,19 @@ async def predict_lesion(
     except HTTPException:
         raise
     except Exception as ex:
-        # Log error
+        # Log error with sanitized message
         processing_time = int((time.perf_counter() - start_time) * 1000)
+        error_msg = "Processing error occurred"  # Sanitized message
         log = models.ApiLog(
             request_url=f"/api/v1/predict/lesion",
             status_code=422,
             response_time=float(processing_time),
-            result_preview=f"ERROR: {str(ex)}"
+            result_preview=error_msg
         )
         db.add(log)
         db.commit()
         
         raise HTTPException(
             status_code=422,
-            detail={"error_code": "PROCESSING_ERROR", "message": str(ex)}
+            detail={"error_code": "PROCESSING_ERROR", "message": "Internal processing error"}
         )
