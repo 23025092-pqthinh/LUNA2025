@@ -6,7 +6,9 @@ from sqlalchemy.ext.declarative import declarative_base
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def _create_engine_with_fallback(url: str):
+    print("Testing database connection...")
     eng = create_engine(url, future=True)
+    print("Connection successful.")
     with eng.connect() as conn:
         pass
     return eng
