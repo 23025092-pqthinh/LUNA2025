@@ -4,7 +4,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-# Build DATABASE_URL from environment with sensible defaults
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     user = os.getenv("POSTGRES_USER", "postgres")
