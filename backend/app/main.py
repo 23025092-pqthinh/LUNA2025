@@ -45,6 +45,7 @@ app.include_router(datasets.router)
 app.include_router(submissions.router)
 app.include_router(leaderboard.router)
 app.include_router(apitest.router)
+app.include_router(apitest.router, prefix="/api")  # Add /api prefix for v1 endpoints
 
 @app.get("/")
 def root():
