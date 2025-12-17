@@ -290,18 +290,6 @@ def _read_label_map(path: str) -> Dict[str, str]:
 
 
 def compute_classification_metrics(gt_path: str, pred_path: str) -> Dict[str, Any]:
-    """Compute classification metrics (acc, precision, recall, f1) and optional AUC.
-
-    AUC is only computed when the prediction CSV contains an explicit numeric
-    score/probability column (e.g. `prob`, `score`, `probability`). Label-only
-    files (id,label) are treated as classification outputs and do not yield AUC.
-    """
-    # Preserve prior FileNotFoundError semantics
-    if not os.path.exists(gt_path):
-        raise FileNotFoundError(f"Groundtruth not found: {gt_path}")
-    if not os.path.exists(pred_path):
-        raise FileNotFoundError(f"Submission file not found: {pred_path}")
-
     try:
         res = _evaluate_core(gt_path, pred_path, return_curves=False, raise_on_missing=False)
     except ValueError:
