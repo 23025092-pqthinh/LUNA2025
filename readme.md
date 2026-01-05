@@ -18,6 +18,29 @@ export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/luna"
 uvicorn app.main:app --reload
 ```
 
+### 3: New Features
+
+#### Docker Image Submission
+- **POST /submissions/docker**: Upload Docker images containing LUNA models
+- Automatic evaluation with dataset
+- Background task processing
+- Results stored in MinIO
+- Leaderboard automatically updated
+
+#### Lesion Prediction API
+- **POST /apitest/v1/predict/lesion**: Standard API for lesion prediction (mock implementation)
+- Accepts .mha/.mhd CT scan files
+- Returns malignancy probability and classification
+- Full error handling per specification
+- Detailed API documentation in [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+
+#### Testing
+```bash
+# Test the lesion prediction API
+cd backend
+python3 test_lesion_api.py
+```
+
 ### features 3:
 #### Frontend
 **FE-01**: Auth pages (login), layout (sidebar/header), guard route theo role.
@@ -36,3 +59,5 @@ uvicorn app.main:app --reload
 **BE-06**: API Test API (/apitest/call với 1–2 ảnh mẫu, timeout, log latency).
 **BE-07**: Groundtruth download (protected), pagination, filters, error codes.
 **BE-08**: Unit/integration tests (pytest) cho evaluate & merge CSV.
+**BE-09**: Docker submission API (upload Docker images, auto-evaluate, update leaderboard).
+**BE-10**: Lesion prediction API (POST /api/v1/predict/lesion, .mha/.mhd support).

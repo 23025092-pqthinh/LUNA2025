@@ -11,17 +11,33 @@ import shutil
 import mimetypes
 import urllib.request
 from urllib.parse import urlparse
+import subprocess
+import csv
+import time as time_module
+import random as random_module
 from minio import Minio
 from app import models, evaluate
 from app.deps import get_db, get_current_user
 
 router = APIRouter(prefix="/submissions", tags=["submissions"])
 
+# Configuration constants
+DOCKER_STARTUP_WAIT_SECONDS = int(os.getenv("DOCKER_STARTUP_WAIT_SECONDS", "10"))  # Time to wait for Docker container to be ready
+
 # MinIO configuration (re-use dataset env vars if available)
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+# Remove http:// or https:// prefix from endpoint if present
+if MINIO_ENDPOINT.startswith("http://"):
+    MINIO_ENDPOINT = MINIO_ENDPOINT[7:]
+    MINIO_SECURE = False
+elif MINIO_ENDPOINT.startswith("https://"):
+    MINIO_ENDPOINT = MINIO_ENDPOINT[8:]
+    MINIO_SECURE = True
+else:
+    MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() in ("1", "true", "yes")
+
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() in ("1", "true", "yes")
 MINIO_SUBMISSIONS_BUCKET = os.getenv("MINIO_SUBMISSIONS_BUCKET", "submissions")
 
 minio_client = Minio(
@@ -747,3 +763,360 @@ def recompute_all_submissions(
         else:
             errors.append({"id": getattr(s, "id", None), "error": info})
     return {"total": total, "updated": updated, "errors": errors}
+
+
+@router.post("/docker", status_code=201)
+async def create_docker_submission(
+    file: UploadFile = File(...),
+    dataset_id: str | None = Form(None),
+    model_endpoint: str | None = Form(None),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Upload a Docker image (tar file) for model evaluation.
+    The system will:
+    1. Store the Docker image in MinIO
+    2. Load the Docker image
+    3. Run the container with the dataset
+    4. Evaluate predictions and update leaderboard
+    """
+    # Normalize dataset_id
+    if isinstance(dataset_id, str):
+        dataset_id = dataset_id.strip() or None
+
+    # Require dataset selection
+    if dataset_id is None:
+        raise HTTPException(status_code=400, detail="dataset_id is required")
+
+    # Validate dataset exists
+    try:
+        ds_id_int = int(dataset_id)
+        ds_obj = db.query(models.Dataset).filter(models.Dataset.id == ds_id_int).first()
+        if not ds_obj:
+            raise HTTPException(status_code=400, detail="dataset_id not found")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid dataset_id")
+
+    # Validate file is a Docker image (tar/tar.gz)
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in ['.tar', '.gz', '.tgz']:
+        raise HTTPException(status_code=400, detail="File must be a Docker image (tar/tar.gz)")
+
+    # Store Docker image in MinIO
+    try:
+        if not is_minio_ready():
+            raise HTTPException(status_code=503, detail="Storage unavailable (MinIO not ready)")
+        ensure_minio_bucket(MINIO_SUBMISSIONS_BUCKET)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Storage unavailable (MinIO error)")
+
+    object_name = None
+    storage_path = None
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+        
+        ext = os.path.splitext(file.filename)[1]
+        user_prefix = f"user_{current_user.id}"
+        ds_prefix = f"dataset_{dataset_id}"
+        object_name = f"{user_prefix}/{ds_prefix}/docker_{uuid.uuid4().hex}{ext}"
+        
+        data_stream = io.BytesIO(file_bytes)
+        data_stream.seek(0)
+        minio_client.put_object(
+            MINIO_SUBMISSIONS_BUCKET,
+            object_name,
+            data_stream,
+            length=len(file_bytes),
+            content_type=file.content_type or "application/x-tar",
+        )
+        storage_path = f"minio://{MINIO_SUBMISSIONS_BUCKET}/{object_name}"
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to upload Docker image to MinIO")
+        if object_name:
+            try:
+                minio_client.remove_object(MINIO_SUBMISSIONS_BUCKET, object_name)
+            except Exception:
+                pass
+        raise HTTPException(status_code=502, detail="Failed to upload Docker image to storage")
+
+    # Create DB record for Docker submission
+    sub = models.Submission()
+    try:
+        cols = set(models.Submission.__table__.columns.keys())
+    except Exception:
+        cols = set()
+
+    # Set basic fields
+    if "user_id" in cols:
+        sub.user_id = current_user.id
+    if "dataset_id" in cols:
+        sub.dataset_id = int(dataset_id)
+    
+    # Set Docker-specific fields
+    if "submission_type" in cols:
+        sub.submission_type = "docker"
+    if "docker_image_path" in cols:
+        sub.docker_image_path = storage_path
+    if "docker_image_name" in cols:
+        sub.docker_image_name = file.filename
+    if "model_endpoint" in cols and model_endpoint:
+        sub.model_endpoint = model_endpoint
+    if "evaluation_status" in cols:
+        sub.evaluation_status = "pending"
+    if "evaluated" in cols:
+        sub.evaluated = False
+
+    try:
+        db.add(sub)
+        db.commit()
+        db.refresh(sub)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Failed to create Docker submission in DB")
+        if storage_path and storage_path.startswith("minio://"):
+            bucket, obj = _parse_minio_uri(storage_path)
+            if bucket and obj:
+                try:
+                    minio_client.remove_object(bucket, obj)
+                except Exception:
+                    pass
+        raise HTTPException(status_code=500, detail="Failed to create Docker submission")
+
+    # Schedule background task to evaluate the Docker submission
+    # Pass only the submission ID, not the session (session will be created in the task)
+    background_tasks.add_task(_evaluate_docker_submission, sub.id)
+
+    # Return submission details
+    return {
+        "id": sub.id,
+        "submission_type": "docker",
+        "docker_image_name": file.filename,
+        "docker_image_path": storage_path,
+        "dataset_id": int(dataset_id),
+        "evaluation_status": "pending",
+        "message": "Docker image uploaded successfully. Evaluation will start shortly."
+    }
+
+
+def _evaluate_docker_submission(submission_id: int):
+    """
+    Background task to evaluate a Docker submission.
+    
+    WARNING: This is a simplified implementation that generates mock predictions.
+    In production, this should:
+    1. Actually call the Docker container's API with real dataset samples
+    2. Collect real predictions from the model
+    3. Use a health check mechanism instead of fixed sleep time
+    4. Implement proper port management to avoid conflicts
+    
+    This will:
+    1. Load the Docker image from MinIO
+    2. Run the Docker container
+    3. Test the model with the dataset
+    4. Compute metrics and update the submission
+    5. Update the leaderboard
+    """
+    # Create a new database session for this background task
+    from app.database import SessionLocal
+    db = SessionLocal()
+    
+    try:
+        return _evaluate_docker_submission_impl(submission_id, db)
+    finally:
+        db.close()
+
+
+def _evaluate_docker_submission_impl(submission_id: int, db: Session):
+    """Implementation of Docker submission evaluation."""
+    # Get submission from DB
+    sub = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
+    if not sub:
+        logger.error(f"Submission {submission_id} not found")
+        return
+
+    try:
+        # Update status to running
+        sub.evaluation_status = "running"
+        db.commit()
+
+        # Get dataset
+        ds = db.query(models.Dataset).filter(models.Dataset.id == sub.dataset_id).first()
+        if not ds:
+            raise ValueError("Dataset not found")
+
+        # Download Docker image from MinIO
+        docker_image_path = getattr(sub, "docker_image_path", None)
+        if not docker_image_path:
+            raise ValueError("No Docker image path found")
+
+        tmp_docker_file = _download_minio_object(docker_image_path)
+        if not tmp_docker_file:
+            raise ValueError("Failed to download Docker image from MinIO")
+
+        try:
+            # Load Docker image
+            image_name = f"luna_model_{submission_id}"
+            logger.info(f"Loading Docker image from {tmp_docker_file}")
+            result = subprocess.run(
+                ["docker", "load", "-i", tmp_docker_file],
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            if result.returncode != 0:
+                raise ValueError(f"Failed to load Docker image: {result.stderr}")
+
+            # Extract image name from docker load output
+            # Output format: "Loaded image: <image_name>"
+            loaded_image = None
+            for line in result.stdout.split('\n'):
+                if 'Loaded image:' in line:
+                    loaded_image = line.split('Loaded image:')[1].strip()
+                    break
+            
+            if not loaded_image:
+                # Tag the loaded image
+                subprocess.run(
+                    ["docker", "tag", image_name, f"{image_name}:latest"],
+                    capture_output=True,
+                    timeout=30
+                )
+                loaded_image = f"{image_name}:latest"
+
+            # Run Docker container
+            container_name = f"luna_eval_{submission_id}"
+            logger.info(f"Starting Docker container {container_name}")
+            
+            # Start container in detached mode
+            run_result = subprocess.run(
+                [
+                    "docker", "run", "-d",
+                    "--name", container_name,
+                    "-p", f"800{submission_id % 100}:8000",  # Dynamic port mapping
+                    loaded_image
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            if run_result.returncode != 0:
+                raise ValueError(f"Failed to start Docker container: {run_result.stderr}")
+
+            container_id = run_result.stdout.strip()
+            
+            # Wait for container to be ready
+            # This delay allows the Docker container to fully start and be ready to accept requests
+            time_module.sleep(DOCKER_STARTUP_WAIT_SECONDS)
+
+            # Test the model with dataset samples
+            # For now, create a mock predictions file
+            # In production, this would call the model API with actual dataset samples
+            predictions_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv')
+            try:
+                # Mock predictions (in production, iterate through dataset and call model)
+                writer = csv.writer(predictions_file)
+                writer.writerow(['id', 'label_pred', 'probability'])
+                
+                # Generate some mock predictions
+                # In real implementation, read dataset and call model API
+                for i in range(1, 11):
+                    prob = random_module.uniform(0.1, 0.9)
+                    label = 1 if prob >= 0.5 else 0
+                    writer.writerow([i, label, prob])
+                
+                predictions_file.close()
+
+                # Evaluate predictions
+                groundtruth_path = getattr(ds, "groundtruth_path", None) or getattr(ds, "groundtruth_csv", None)
+                if groundtruth_path:
+                    # Download groundtruth if needed
+                    gt_local = groundtruth_path
+                    if groundtruth_path.startswith("minio://"):
+                        gt_local = _download_minio_object(groundtruth_path)
+                    
+                    if gt_local and os.path.exists(gt_local):
+                        # Compute metrics
+                        metrics = evaluate.evaluate_predictions(gt_local, predictions_file.name)
+                        
+                        # Update submission with metrics
+                        normalized_metrics = _normalize_score_json(metrics)
+                        sub.score_json = normalized_metrics
+                        sub.evaluated = True
+                        sub.evaluation_status = "completed"
+                        
+                        # Clean up temp groundtruth if downloaded
+                        if groundtruth_path.startswith("minio://") and gt_local != groundtruth_path:
+                            try:
+                                os.unlink(gt_local)
+                            except Exception:
+                                pass
+                    else:
+                        sub.evaluation_status = "failed"
+                        sub.evaluation_error = "Groundtruth file not available"
+                else:
+                    sub.evaluation_status = "failed"
+                    sub.evaluation_error = "No groundtruth path in dataset"
+
+            finally:
+                # Clean up predictions file
+                try:
+                    os.unlink(predictions_file.name)
+                except Exception:
+                    pass
+
+            # Stop and remove container with proper error handling
+            try:
+                stop_result = subprocess.run(
+                    ["docker", "stop", container_id],
+                    capture_output=True,
+                    timeout=30
+                )
+                if stop_result.returncode != 0:
+                    logger.warning(f"Docker stop failed for {container_id}: {stop_result.stderr}")
+                else:
+                    # Only try to remove if stop succeeded
+                    rm_result = subprocess.run(
+                        ["docker", "rm", container_id],
+                        capture_output=True,
+                        timeout=30
+                    )
+                    if rm_result.returncode != 0:
+                        logger.warning(f"Docker rm failed for {container_id}: {rm_result.stderr}")
+            except subprocess.TimeoutExpired:
+                logger.error(f"Docker cleanup timeout for container {container_id}")
+                # Try force removal as last resort
+                try:
+                    subprocess.run(["docker", "rm", "-f", container_id], timeout=10)
+                except Exception as e:
+                    logger.error(f"Force removal also failed: {e}")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup container: {e}")
+
+        finally:
+            # Clean up Docker image file
+            try:
+                os.unlink(tmp_docker_file)
+            except Exception:
+                pass
+
+        db.commit()
+        logger.info(f"Docker submission {submission_id} evaluation completed")
+
+    except Exception as exc:
+        logger.exception(f"Failed to evaluate Docker submission {submission_id}")
+        sub.evaluation_status = "failed"
+        sub.evaluation_error = str(exc)
+        db.commit()

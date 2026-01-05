@@ -19,9 +19,18 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 # MinIO config (override via env)
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+# Remove http:// or https:// prefix from endpoint if present
+if MINIO_ENDPOINT.startswith("http://"):
+    MINIO_ENDPOINT = MINIO_ENDPOINT[7:]
+    MINIO_SECURE = False
+elif MINIO_ENDPOINT.startswith("https://"):
+    MINIO_ENDPOINT = MINIO_ENDPOINT[8:]
+    MINIO_SECURE = True
+else:
+    MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() in ("1", "true", "yes")
+
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() in ("1", "true", "yes")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "datasets")
 
 minio_client = Minio(
